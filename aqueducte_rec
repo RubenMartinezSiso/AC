@@ -1,0 +1,55 @@
+#!/usr/bin/python3
+# -*- coding: cp1252 -*-
+import sys
+
+if len(sys.argv) == 2:
+    
+    #abrir el fichero y leer la primera linea (split para separar los datos)
+    f = open(sys.argv[1])
+    datos = f.readline()
+    datos2 = datos.split()
+    
+    #guardar datos de la primera linea
+    n = int(datos2[0])
+    h = int(datos2[1])
+    alfa = int(datos2[2])
+    beta = int(datos2[3])
+
+    #guardar coordenadas de los puntos
+    v = [[0 for _ in range(2)] for _ in range(n)]
+    for i in range(n):
+        datos = f.readline()
+        datos2 = datos.split()
+        v[i][0] = int(datos2[0])
+        v[i][1] = int(datos2[1])
+
+    #cost1: acueducto (recursivo)
+    #calcular el sumatorio de hi y di y calcular coste
+    def sumhrec (v, n):
+        if (n < 0):
+            return 0
+        else:
+            return h - v[n][1] + sumhrec(v, n-1)
+
+    def sumdrec (v, n):
+        if (n <= 0):
+            return 0
+        elif (n != 0):
+            return (v[n][0] - v[n-1][0])**2 + sumdrec(v, n-1)
+    
+    sumh = sumhrec(v, n-1)  
+    sumd = sumdrec(v, n-1)
+    cost1 = alfa*sumh + beta*sumd
+    
+    #cost2: puente
+    sumh = (h - v[0][1]) + (h - v[n-1][1])
+    sumd = (v[n-1][0] - v[0][0])**2
+    cost2 = alfa*sumh + beta*sumd
+	
+    f.close()
+
+    #buscar el mejor coste
+    if cost1 <= cost2:
+        print(cost1)
+    else:
+        print(cost2)
