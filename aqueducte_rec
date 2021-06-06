@@ -1,55 +1,120 @@
 #!/usr/bin/python3
 # -*- coding: cp1252 -*-
+"""System module."""
 import sys
+import cmath
+sys.setrecursionlimit(100000)
+
+def ac_impossible(index):
+    """ac_impossible: Comprobar si el acueducto es imposible recursivo"""
+    if index > NUMBER-2:
+        return False
+    radius = (XS[index+1] - XS[index])/2
+    if ((HEIGHT - YS[index]) < radius or (HEIGHT - YS[index+1]) < radius):
+        #Acueducto imposible
+        return True or ac_impossible(index+1)
+    return False or ac_impossible(index+1)
+
+def pu_impossible(index):
+    """pu_impossible: Comprobar si el puente es imposible en recursivo"""
+    if index > NUMBER-1:
+        return False
+    radius = (XS[NUMBER-1] - XS[0])/2
+    #Necesito una test_x y test_y (punto que he de comprobar)
+    test_x = XS[index]
+    test_y = YS[index]
+    #1: Buscar x del punto medio (siempre es el mismo)
+    medio = (XS[NUMBER-1] - XS[0])/2 + XS[0]
+    #2: Calcular up_x
+    up_x = test_x - medio
+    #3: Calcular up_y
+    up_y = cmath.sqrt(radius**2 - up_x**2)
+    #4: Cacular altura
+    alt = up_y + (HEIGHT - radius)
+    #5: Comprobar que no pase la altura
+    test_y_complex = complex(test_y)
+    if alt.real <= test_y_complex.real:
+        #Puente imposible
+        return True or pu_impossible(index+1)
+    return False or pu_impossible(index+1)
+
+def sumhrec(index):
+    """sumhrec: calcular el sumatorio de hi recursivo"""
+    if index < 0:
+        return 0
+    return HEIGHT - YS[index] + sumhrec(index-1)
+
+def sumdrec(index):
+    """sumdrec: calcular el sumatorio de di recursivo"""
+    if index <= 0:
+        return 0
+    return (XS[index] - XS[index-1])**2 + sumdrec(index-1)
+
 
 if len(sys.argv) == 2:
+    #Abrir el fichero y leer la primera linea (split para separar los DATOS)
+    FILE = open(sys.argv[1])
+    DATOS = FILE.readline()
+    DATOS2 = DATOS.split()
+	#Guardar datos de la primera linea
+    NUMBER = int(DATOS2[0])
+    HEIGHT = int(DATOS2[1])
+    ALFA = int(DATOS2[2])
+    BETA = int(DATOS2[3])
+	#Guardar coordenadas de los puntos
+    XS = [0 for _ in range(NUMBER)]
+    YS = [0 for _ in range(NUMBER)]
+    for i in range(NUMBER):
+        DATOS = FILE.readline()
+        DATOS2 = DATOS.split()
+        XS[i] = int(DATOS2[0])
+        YS[i] = int(DATOS2[1])
+    FILE.close()
+else:
+    #En caso de no recibir un archivo, pedir valores por terminal
+    print("Ningun archivo por parametro")
+    NUMBER = input("NUMBER:")
+    NUMBER = int(NUMBER)
+    HEIGHT = input("HEIGHT:")
+    HEIGHT = int(HEIGHT)
+    ALFA = input("ALFA:")
+    ALFA = int(ALFA)
+    BETA = input("BETA:")
+    BETA = int(BETA)
+    EXIT = False
+    XS = []
+    YS = []
+    while not EXIT:
+        X = input("x:")
+        X = int(X)
+        XS.append(X)
+        Y = input("y:")
+        Y = int(Y)
+        YS.append(Y)
+        SALIR = input("Introducir EXIT para calcular (introducir cualquier cosa para continuar introduciendo puntos)\n")
+        if SALIR == "EXIT":
+            EXIT = True
+#COST1: acueducto
+COST1 = -1
+if not ac_impossible(0):
+    SUMH = sumhrec(NUMBER-1)
+    SUMD = sumdrec(NUMBER-1)
+    COST1 = ALFA*SUMH + BETA*SUMD
+#COST2: puente
+COST2 = -1
+if not pu_impossible(1):
+    SUMH = (HEIGHT - YS[0]) + (HEIGHT - YS[NUMBER-1])
+    SUMD = (XS[NUMBER-1] - XS[0])**2
+    COST2 = ALFA*SUMH + BETA*SUMD
+#Elegir el mejor coste o imposible
+if COST1 == -1 and COST2 == -1:
+    print ("impossible")
+elif COST1 != -1 and COST2 == -1:
+    print (COST1)
+elif COST1 == -1 and COST2 != -1:
+    print (COST2)
+elif COST1 <= COST2:
+    print (COST1)
+else:
+    print (COST2)
     
-    #abrir el fichero y leer la primera linea (split para separar los datos)
-    f = open(sys.argv[1])
-    datos = f.readline()
-    datos2 = datos.split()
-    
-    #guardar datos de la primera linea
-    n = int(datos2[0])
-    h = int(datos2[1])
-    alfa = int(datos2[2])
-    beta = int(datos2[3])
-
-    #guardar coordenadas de los puntos
-    v = [[0 for _ in range(2)] for _ in range(n)]
-    for i in range(n):
-        datos = f.readline()
-        datos2 = datos.split()
-        v[i][0] = int(datos2[0])
-        v[i][1] = int(datos2[1])
-
-    #cost1: acueducto (recursivo)
-    #calcular el sumatorio de hi y di y calcular coste
-    def sumhrec (v, n):
-        if (n < 0):
-            return 0
-        else:
-            return h - v[n][1] + sumhrec(v, n-1)
-
-    def sumdrec (v, n):
-        if (n <= 0):
-            return 0
-        elif (n != 0):
-            return (v[n][0] - v[n-1][0])**2 + sumdrec(v, n-1)
-    
-    sumh = sumhrec(v, n-1)  
-    sumd = sumdrec(v, n-1)
-    cost1 = alfa*sumh + beta*sumd
-    
-    #cost2: puente
-    sumh = (h - v[0][1]) + (h - v[n-1][1])
-    sumd = (v[n-1][0] - v[0][0])**2
-    cost2 = alfa*sumh + beta*sumd
-	
-    f.close()
-
-    #buscar el mejor coste
-    if cost1 <= cost2:
-        print(cost1)
-    else:
-        print(cost2)
