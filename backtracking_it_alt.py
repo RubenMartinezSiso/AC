@@ -4,169 +4,131 @@
 import sys
 import math
 from itertools import product
-sys.setrecursionlimit(10000000)
+from Ficheros import Ficheros
 
-class Pila:
-    """Representacion de una pila"""
+class MyApplication():
+    """clase principal"""
     def __init__(self):
-        """Crear pila vacia"""
-        self.items = []
-    def apilar(self, element):
-        """Agrega el elemento"""
-        self.items.append(element)
-    def desapilar(self):
-        """Eliminar ultimo elemento de la pila y lo devuelve"""
-        try:
-            return self.items.pop()
-        except IndexError:
-            raise ValueError("empty")
-    def longitud(self):
-        """Devuelve la longitud de la pila"""
-        return len(self.items)
-    def inspeccionar(self):
-        """Devuelve el ultimo elemento de la pila"""
-        return self.items[len(self.items)-1]
-    def contenido(self):
-        """Devuelve todo el contenido de la pila"""
-        pila = [0 for _ in range(len(self.items))]
-        index = 0
-        while index < len(self.items):
-            pila[index] = self.items[index]
+        """constructor"""
+
+    def sumhit(self, aqueduct, value, HEIGHT, YS):
+        """sumhit: calculate summation of hi iterative"""
+        sumh = 0
+        index = value
+        while index >= 0:
+            if aqueduct[index] == 1:
+                sumh = sumh + (HEIGHT - YS[index])
+            index -= 1
+        return sumh
+
+    def sumdit(self, aqueduct, value, XS):
+        """sumdit: calculate summation of di iterative"""
+        sumd = 0
+        index1 = 0
+        index2 = value
+        while index2 > 0:
+            exit = False
+            index1 = index2 - 1
+            while index1 > 0 and not exit:
+                if aqueduct[index1] == 0:
+                    index1 -= 1
+                else:
+                    exit = True
+            sumd = sumd + (XS[index2] - XS[index1])**2
+            index2 = index1
+        return sumd
+
+    def impossible(self, radius, height, old_x, old_y, old_pointer, index_x, index_y, index_pointer, XS, YS):
+        """impossible: first check the height of the pillars
+                       then check the intermediate points between the arch of the aqueduct"""
+        newimpossible = False
+        #Check that the pillars are lower than the maximum height
+        if (height - old_y) < radius or (height - index_y) < radius:
+            newimpossible = True
+        #Check the intermediate points between the arch of the aqueduct
+        loopindex = old_pointer + 1
+        if loopindex != index_pointer and not newimpossible:
+            while loopindex < index_pointer:
+                #test_x and test_y points are needed (coordinates of the point to be checked)
+                test_x = XS[loopindex]
+                test_y = YS[loopindex]
+                #1: Search coordinate x of mid-point
+                medio = (index_x - old_x)/2 + old_x
+                #2: Calculate up_x
+                up_x = test_x - medio
+                #3: Calculate up_y
+                up_y = math.sqrt(radius**2 - up_x**2)
+                #4: Caculate maxheight
+                maxheight = up_y + (height - radius)
+                #5: Check that the point does not exceed maxheight
+                test_y_float = float(test_y)
+                if maxheight < test_y_float:
+                    newimpossible = True
+                loopindex += 1
+        return newimpossible
+
+    def impossiblestack(self, stack, height, XS, YS):
+        """impossiblestack: select the parts of the stack to be checked
+                            to know if they are impossible aqueducts or not"""
+        boolean = False
+        back_x = XS[0]
+        back_y = YS[0]
+        back_pointer = 0
+        index = 1
+        while index < len(stack) and not boolean:
+            if stack[index] == 1:
+                front_x = XS[index]
+                front_y = YS[index]
+                front_pointer = index
+                radius = (front_x - back_x)/2
+                boolean = self.impossible(radius, height, back_x, back_y, back_pointer, front_x, front_y, front_pointer, XS, YS)
+                back_x = front_x
+                back_y = front_y
+                back_pointer = front_pointer
             index += 1
-        return pila
+        return boolean
 
-def sumhit(acueducto, value):
-    """sumhit: calcular el sumatorio de hi iterativo"""
-    sumh = 0
-    index = value
-    while index >= 0:
-        if acueducto[index] == 1:
-            sumh = sumh + (HEIGHT - YS[index])
-        index -= 1
-    return sumh
+    def calculatecost(self, aqueduct, XS, YS, NUMBER, HEIGHT, ALPHA, BETA):
+        """calculatecost: calculate the cost of the entire aqueduct received"""
+        sumh = self.sumhit(aqueduct, NUMBER-1, HEIGHT, YS)
+        sumd = self.sumdit(aqueduct, NUMBER-1, XS)
+        return ALPHA*sumh + BETA*sumd
 
-def sumdit(acueducto, value):
-    """sumdit: calcular el sumatorio de di iterativo"""
-    sumd = 0
-    index1 = 0
-    index2 = value
-    while index2 > 0:
-        salir = False
-        index1 = index2 - 1
-        while index1 > 0 and not salir:
-            if acueducto[index1] == 0:
-                index1 -= 1
+    def generate(self, HEIGHT, NUMBER, XS, YS, ALPHA, BETA):
+        """generate: create the cheapest aqueduct"""
+        provisionalcost = 999999999999999999999999999999
+        aqlist = list(product([0, 1], repeat=NUMBER))
+        for index in range(2**NUMBER):
+            if (aqlist[index][0] == 1 and aqlist[index][NUMBER-1] == 1):
+                newcost = self.calculatecost(aqlist[index], XS, YS, NUMBER, HEIGHT, ALPHA, BETA)
+                if(not self.impossiblestack(aqlist[index], HEIGHT, XS, YS) and newcost < provisionalcost):
+                    provisionalcost = newcost
+        return provisionalcost
+
+    def run(self, params):
+        """run: ejecute algorithm"""
+        if len(sys.argv) == 2:
+            #Open the file and read the first line (split to separate the data)
+            ALPHA, BETA, HEIGHT, NUMBER, POINTS = Ficheros().leerFichero(params[1])
+            XS = [0 for _ in range(NUMBER)]
+            YS = [0 for _ in range(NUMBER)]
+            for i in range(NUMBER):
+                XS[i] = POINTS[i].getX()
+                YS[i] = POINTS[i].getY()
+            #Calculate total cost
+            COSTAQUEDUCT = self.generate(HEIGHT, NUMBER, XS, YS, ALPHA, BETA)
+            if COSTAQUEDUCT != 999999999999999999999999999999:
+                print(COSTAQUEDUCT)
             else:
-                salir = True
-        sumd = sumd + (XS[index2] - XS[index1])**2
-        index2 = index1
-    return sumd
+                print("impossible")
+        else:
+            print("ERROR: no file available")
 
-def impossible(radius, height, old_x, old_y, old_pointer, index_x, index_y, index_pointer):
-    """imposible: comprobar los puntos intermedios entre el arco del acueducto"""
-    newimpossible = False
-    #Comprobar que los pilares son inferiores a la altura maxima
-    if (height - old_y) < radius or (height - index_y) < radius:
-        newimpossible = True
-    #Comprobar los puntos por debajo del arco
-    loopindex = old_pointer + 1
-    if loopindex != index_pointer and not newimpossible:
-        #ComprobacióNUMBER y bucle para todos los puntos
-        while loopindex < index_pointer:
-            #Necesito una test_x y test_y (del punto que he de comprobar)
-            test_x = XS[loopindex]
-            test_y = YS[loopindex]
-            #1: Buscar x del punto medio
-            medio = (index_x - old_x)/2 + old_x
-            #2: Calcular up_x
-            up_x = test_x - medio
-            #3: Calcular up_y
-            up_y = math.sqrt(radius**2 - up_x**2)
-            #4: Cacular altura
-            alt = up_y + (height - radius)
-            #5: Comprobar que no pase la altura
-            test_y_float = float(test_y)
-            if alt < test_y_float:
-                newimpossible = True
-            loopindex += 1
-    return newimpossible
-
-def impossiblestack(pila, height):
-    """impossiblestack: seleccionar las partes de la pila que hay comprobar
-       para saber si son acueductos imposible o no"""
-    boolean = False
-    back_x = XS[0]
-    back_y = YS[0]
-    back_pointer = 0
-    index = 1
-    while index < len(pila) and not boolean:
-        if pila[index] == 1:
-            front_x = XS[index]
-            front_y = YS[index]
-            front_pointer = index
-            radius = (front_x - back_x)/2
-            boolean = impossible(radius, height, back_x, back_y, back_pointer, front_x, front_y, front_pointer)
-            back_x = front_x
-            back_y = front_y
-            back_pointer = front_pointer
-        index += 1
-    return boolean
-
-def calculatecost(acueducto):
-    """calculatecost: calcular el coste del acueducto entero recibido"""
-    sumh = sumhit(acueducto, NUMBER-1)
-    sumd = sumdit(acueducto, NUMBER-1)
-    return ALPHA*sumh + BETA*sumd
-
-def copiarpila(pila):
-    """copiarpila: duplicar la pila racibida"""
-    copia = Pila()
-    intermedio = Pila()
-    for index in range(pila.longitud()):
-        intermedio.apilar(pila.inspeccionar())
-        pila.desapilar()
-    for index in range(intermedio.longitud()):
-        pila.apilar(intermedio.inspeccionar())
-        copia.apilar(intermedio.inspeccionar())
-        intermedio.desapilar()
-    return copia
-
-def generate():
-    """generate: generar todos los acueductos posibles y quedarse con el mas barato"""
-    provisionalcost = 999999999999999999999999999999
-    lista = list(product([0, 1], repeat=NUMBER))
-    for index in range(2**NUMBER):
-        if (lista[index][0] == 1 and lista[index][NUMBER-1] == 1):
-            newcost = calculatecost(lista[index])
-            if(not impossiblestack(lista[index], HEIGHT) and newcost < provisionalcost):
-                provisionalcost = newcost
-    return provisionalcost
-#main()
-if len(sys.argv) == 2:
-    #Abrir el fichero y leer la primera linea (split para separar los datos)
-    FILE = open(sys.argv[1])
-    DATOS = FILE.readline()
-    DATOS2 = DATOS.split()
-    #Guardar datos de la primera linea
-    NUMBER = int(DATOS2[0])
-    HEIGHT = int(DATOS2[1])
-    ALPHA = int(DATOS2[2])
-    BETA = int(DATOS2[3])
-    #Guardar coordenadas de los puntos
-    XS = [0 for _ in range(NUMBER)]
-    YS = [0 for _ in range(NUMBER)]
-    for i in range(NUMBER):
-        DATOS = FILE.readline()
-        DATOS2 = DATOS.split()
-        XS[i] = int(DATOS2[0])
-        YS[i] = int(DATOS2[1])
-    FILE.close()
-    #Calcular coste total
-    COSTACUEDUCTO = generate()
-    if COSTACUEDUCTO != 999999999999999999999999999999:
-        print(COSTACUEDUCTO)
-    else:
-        print("impossible")
-else:
-    print("ERROR: Ningun archivo por parametro")
+def main():
+    """main"""
+    sys.setrecursionlimit(10000000)
+    app = MyApplication()
+    app.run(sys.argv)
+if __name__ == '__main__':
+    main()
     
