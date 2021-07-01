@@ -3,136 +3,139 @@
 """System module"""
 import sys
 import math
-sys.setrecursionlimit(10000000)
+from Ficheros import Ficheros
 
-def sumhrec(acueducto, value, height):
-    """sumhrec: calcular el sumatorio de hi recursivo"""
-    if value < 0:
-        return 0
-    elif acueducto[value] == 1:
-        return height - YS[value] + sumhrec(acueducto, value-1, height)
-    return 0 + sumhrec(acueducto, value-1, height)
+class MyApplication():
+    """clase principal"""
+    def __init__(self):
+        """constructor"""
 
-def sumdrec(acueducto, value):
-    """sumdrec: calcular el sumatorio de di recursivo"""
-    if value <= 0:
-        return 0
-    salir = False
-    index = value-1
-    while index > 0 and not salir:
-        if acueducto[index] == 0:
-            index -= 1
-        else:
-            salir = True
-    return (XS[value] - XS[index])**2 + sumdrec(acueducto, index)
+    def sumhrec(self, aqueduct, value, height, XS, YS):
+        """sumhrec: calculate summation of hi recursive"""
+        if value < 0:
+            return 0
+        elif aqueduct[value] == 1:
+            return height - YS[value] + self.sumhrec(aqueduct, value-1, height, XS, YS)
+        return 0 + self.sumhrec(aqueduct, value-1, height, XS, YS)
 
-def impossible(radius, height, old_x, old_y, old_pointer, index_x, index_y, index_pointer):
-    """imposible: primero comprobar altura de los pilares
-       luego comprobar los puntos intermedios entre el arco del acueducto"""
-    if (height - old_y) < radius or (height - index_y) < radius:
-        return True
-    elif old_pointer + 1 != index_pointer:
-        return impossible_rec(old_pointer + 1, radius, height, index_pointer, index_x, old_x)
-    return False
+    def sumdrec(self, aqueduct, value, XS, YS):
+        """sumdrec: calculate summation of di recursive"""
+        if value <= 0:
+            return 0
+        exit = False
+        index = value-1
+        while index > 0 and not exit:
+            if aqueduct[index] == 0:
+                index -= 1
+            else:
+                exit = True
+        return (XS[value] - XS[index])**2 + self.sumdrec(aqueduct, index, XS, YS)
 
-def impossible_rec(loopindex, radius, height, index_pointer, index_x, old_x):
-    """imposible_rec: comprobar los puntos intermedios entre el arco del acueducto"""
-    if loopindex >= index_pointer:
+    def impossible(self, radius, height, old_x, old_y, old_pointer, index_x, index_y, index_pointer, XS, YS):
+        """impossible: first check the height of the pillars
+                       then check the intermediate points between the arch of the aqueduct"""
+        if (height - old_y) < radius or (height - index_y) < radius:
+            return True
+        elif old_pointer + 1 != index_pointer:
+            return self.impossible_rec(old_pointer + 1, radius, height, index_pointer, index_x, old_x, XS, YS)
         return False
-    #Necesito un test_x y test_y (del punto que he de comprobar)
-    test_x = XS[loopindex]
-    test_y = YS[loopindex]
-    #1: Buscar x del punto medio
-    medio = (index_x - old_x)/2 + old_x
-    #2: Calcular up_x
-    up_x = test_x - medio
-    #3: Calcular up_y
-    up_y = math.sqrt(radius**2 - up_x**2)
-    #4: Cacular altura
-    alt = up_y + (height - radius)
-    #5: Comprobar que no pase la altura
-    test_y_float = float(test_y)
-    if alt < test_y_float:
-        return True
-    return impossible_rec(loopindex+1, radius, height, index_pointer, index_x, old_x)
 
-def generate(acueducto, value, height, alpha, beta, old_x, old_y, old_pointer):
-    """generate: generar el acueducto mas barato"""
-    provisional_cost = 99999999999999999999999
-    new_x = -1
-    new_y = -1
-    new_pointer = -1
-    exist = False
-    index = old_pointer + 1
-    while index < value:
-        #Comprobar todas las combinaciones desde un punto y guardar la opcion mas barata
-        sumh = (height - old_y) + (height - YS[index])
-        sumd = (XS[index] - old_x)**2
-        cost = alpha*sumh + beta*sumd
-        radius = (XS[index] - old_x)/2
-        newimpossible = impossible(radius, height, old_x, old_y, old_pointer, XS[index], YS[index], index)
-        if (not newimpossible) and (cost <= provisional_cost):
-            #Nueva combinacion mas barata encontrada (y no imposible)
-            provisional_cost = cost
-            new_x = XS[index]
-            new_y = YS[index]
-            new_pointer = index
-            exist = True
+    def impossible_rec(self, loopindex, radius, height, index_pointer, index_x, old_x, XS, YS):
+        """imposible_rec: check the intermediate points between the arch of the aqueduct"""
+        if loopindex >= index_pointer:
+            return False
+        #test_x and test_y points are needed (coordinates of the point to be checked)
+        test_x = XS[loopindex]
+        test_y = YS[loopindex]
+        #1: Search coordinate x of mid-point
+        medio = (index_x - old_x)/2 + old_x
+        #2: Calculate up_x
+        up_x = test_x - medio
+        #3: Calculate up_y
+        up_y = math.sqrt(radius**2 - up_x**2)
+        #4: Caculate maxheight
+        maxheight = up_y + (height - radius)
+        #5: Check that the point does not exceed maxheight
+        test_y_float = float(test_y)
+        if maxheight < test_y_float:
+            return True
+        return self.impossible_rec(loopindex+1, radius, height, index_pointer, index_x, old_x, XS, YS)
+
+    def generate(self, aqueduct, value, height, alpha, beta, old_x, old_y, old_pointer, XS, YS):
+        """generate: create the cheapest aqueduct"""
+        provisional_cost = 99999999999999999999999
+        new_x = -1
+        new_y = -1
+        new_pointer = -1
+        exist = False
+        index = old_pointer + 1
+        while index < value:
+            #Check all combinations from one point and save the cheapest option
+            sumh = (height - old_y) + (height - YS[index])
+            sumd = (XS[index] - old_x)**2
+            cost = alpha*sumh + beta*sumd
+            radius = (XS[index] - old_x)/2
+            newimpossible = self.impossible(radius, height, old_x, old_y, old_pointer, XS[index], YS[index], index, XS, YS)
+            if (not newimpossible) and (cost <= provisional_cost):
+                #New cheapest combination found (and not impossible)
+                provisional_cost = cost
+                new_x = XS[index]
+                new_y = YS[index]
+                new_pointer = index
+                exist = True
+            if exist:
+                index += 1
+            else:
+                #If there is one that not exists, exit the loop directly
+                index = value
         if exist:
-            index += 1
+            #If it has been found a new points combination, mark it in the aqueduct
+            aqueduct[new_pointer] = 1
         else:
-            #Si hay uno que no existe, salir del bucle directamente
-            index = value
-    if exist:
-        #Si se ha encontrado una nueva combinacion de puntos, marcarlo en el acueducto
-        acueducto[new_pointer] = 1
-    else:
-        #Si hay un -1, señal de que es imposible
-        acueducto[old_pointer] = -1
-    if new_pointer == value-1 or not exist:
-        #Final
-        return acueducto
-    #Repetir proceso pero ahora desde el nuevo punto hayado
-    return generate(acueducto, value, height, alpha, beta, new_x, new_y, new_pointer)
-#main()
-if len(sys.argv) == 2:
-    #Abrir el fichero y leer la primera linea (split para separar los datos)
-    FILE = open(sys.argv[1])
-    DATOS = FILE.readline()
-    DATOS2 = DATOS.split()
-    #Guardar datos de la primera linea
-    NUMBER = int(DATOS2[0])
-    HEIGHT = int(DATOS2[1])
-    ALPHA = int(DATOS2[2])
-    BETA = int(DATOS2[3])
-    #Guardar coordenadas de los puntos
-    XS = [0 for _ in range(NUMBER)]
-    YS = [0 for _ in range(NUMBER)]
-    for i in range(NUMBER):
-        DATOS = FILE.readline()
-        DATOS2 = DATOS.split()
-        XS[i] = int(DATOS2[0])
-        YS[i] = int(DATOS2[1])
-    FILE.close()
-    #Crear acueducto
-    ACUEDUCTO = [0 for _ in range(NUMBER)]
-    ACUEDUCTO[0] = 1
-    ACUEDUCTO = generate(ACUEDUCTO, NUMBER, HEIGHT, ALPHA, BETA, XS[0], YS[0], 0)
-    #Comprobar que no hay un -1 que indique que es imposible
-    IMPOSSIBLE = False
-    LOOP = 0
-    while LOOP < NUMBER and not IMPOSSIBLE:
-        if ACUEDUCTO[LOOP] == -1:
-            IMPOSSIBLE = True
-        LOOP += 1
-    if not IMPOSSIBLE:
-        #Calcular coste total
-        SUMHTOTAL = sumhrec(ACUEDUCTO, NUMBER-1, HEIGHT)
-        SUMDTOTAL = sumdrec(ACUEDUCTO, NUMBER-1)
-        COSTTOTAL = ALPHA*SUMHTOTAL + BETA*SUMDTOTAL
-        print(COSTTOTAL)
-    else:
-        print("impossible")
-else:
-    print("ERROR: Ningun archivo por parametro")
+            #If there is a -1, a sign that it is impossible
+            aqueduct[old_pointer] = -1
+        if new_pointer == value-1 or not exist:
+            #End
+            return aqueduct
+        #Repeat the process but now from the new point found
+        return self.generate(aqueduct, value, height, alpha, beta, new_x, new_y, new_pointer, XS, YS)
+
+    def run(self, params):
+        """run: ejecute algorithm"""
+        if len(sys.argv) == 2:
+            #Open the file and read the first line (split to separate the data)
+            ALPHA, BETA, HEIGHT, NUMBER, POINTS = Ficheros().leerFichero(params[1])
+            XS = [0 for _ in range(NUMBER)]
+            YS = [0 for _ in range(NUMBER)]
+            for i in range(NUMBER):
+                XS[i] = POINTS[i].getX()
+                YS[i] = POINTS[i].getY()
+            #Create aqueduct
+            AQUEDUCT = [0 for _ in range(NUMBER)]
+            AQUEDUCT[0] = 1
+            AQUEDUCT = self.generate(AQUEDUCT, NUMBER, HEIGHT, ALPHA, BETA, XS[0], YS[0], 0, XS, YS)
+            #Check that there is no -1 indicating that it is impossible
+            IMPOSSIBLE = False
+            LOOP = 0
+            while LOOP < NUMBER and not IMPOSSIBLE:
+                if AQUEDUCT[LOOP] == -1:
+                    IMPOSSIBLE = True
+                LOOP += 1
+            if not IMPOSSIBLE:
+                #Calculate total cost
+                SUMHTOTAL = self.sumhrec(AQUEDUCT, NUMBER-1, HEIGHT, XS, YS)
+                SUMDTOTAL = self.sumdrec(AQUEDUCT, NUMBER-1, XS, YS)
+                COSTTOTAL = ALPHA*SUMHTOTAL + BETA*SUMDTOTAL
+                print(COSTTOTAL)
+            else:
+                print("impossible")
+        else:
+            print("ERROR: no file available")
+def main():
+    """main"""
+    sys.setrecursionlimit(10000000)
+    app = MyApplication()
+    app.run(sys.argv)
+if __name__ == '__main__':
+    main()
     
